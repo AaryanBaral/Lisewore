@@ -6,12 +6,13 @@ namespace EmployeeManagementService.Mappers
 {
     public static class UserMappers
     {
-        public static Users ToUser(RegisterUserDto registerUserDto)
+        public static Users ToUser(RegisterUserDto registerUserDto, string password)
         {
             return new Users()
             {
                 UserName = registerUserDto.UserName,
-                Email = registerUserDto.Email
+                Email = registerUserDto.Email,
+                PasswordHash = password
             };
         }
 

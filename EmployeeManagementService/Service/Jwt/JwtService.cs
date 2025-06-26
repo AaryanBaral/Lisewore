@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EmployeeManagementService.Configurations;
 using EmployeeManagementService.Data;
+using EmployeeManagementService.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -23,7 +24,7 @@ public class JwtService(
     private readonly AppDbContext _context = context;
     private readonly TokenValidationParameters _tokenValidationParameters = tokenValidationParameters;
 
-    public string GenerateJwtToken(IdentityUser user)
+    public string GenerateJwtToken(Users user)
     {
         try
         {

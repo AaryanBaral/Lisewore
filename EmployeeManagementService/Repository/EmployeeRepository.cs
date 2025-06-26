@@ -1,6 +1,7 @@
 using EmployeeManagementService.Data;
 using EmployeeManagementService.Models;
 using EmployeeManagementService.Interface;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeManagementService.Repository
@@ -14,35 +15,74 @@ namespace EmployeeManagementService.Repository
             _context = context;
         }
 
-        public async Task<List<Employee>> GetAllAsync() => await _context.Employees.ToListAsync();
+        public async Task<List<Employee>> GetAllAsync()
+        {
+            return await _context.Employees
+                .FromSqlRaw("EXEC GetAllEmployees")
+                .ToListAsync();
+        }
 
-        public async Task<Employee?> GetByIdAsync(string id) => await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == id);
+        public async Task<Employee?> GetByIdAsync(string id)
+        {
+            var param = new SqlParameter("@Id", id);
+            var employees = await _context.Employees
+                .FromSqlRaw("EXEC GetEmployeeById @Id", param)
+                .ToListAsync();
+
+            return employees.FirstOrDefault();
+        }
 
         public async Task<string> AddAsync(Employee employee)
         {
-            await _context.Employees.AddAsync(employee);
-            await _context.SaveChangesAsync();
+            var parameters = new[]
+            {
+                new SqlParameter("@EmployeeId", employee.EmployeeId),
+                new SqlParameter("@FirstName", employee.FirstName),
+                new SqlParameter("@LastName", employee.LastName),
+                new SqlParameter("@Email", employee.Email),
+                new SqlParameter("@Department", employee.Department),
+                new SqlParameter("@HireDate", employee.HireDate),
+            };
+
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC AddEmployee @EmployeeId, @FirstName, @LastName, @Email, @Department, @HireDate", 
+                parameters);
+
             return employee.EmployeeId;
         }
 
         public async Task UpdateAsync(Employee employee)
         {
-            _context.Employees.Update(employee);
-            await _context.SaveChangesAsync();
+            var parameters = new[]
+            {
+                new SqlParameter("@EmployeeId", employee.EmployeeId),
+                new SqlParameter("@FirstName", employee.FirstName),
+                new SqlParameter("@LastName", employee.LastName),
+                new SqlParameter("@Email", employee.Email),
+                new SqlParameter("@Department", employee.Department),
+                new SqlParameter("@HireDate", employee.HireDate),
+            };
+
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC UpdateEmployee @EmployeeId, @FirstName, @LastName, @Email, @Department, @HireDate", 
+                parameters);
         }
 
         public async Task DeleteAsync(string id)
         {
-            var emp = await GetByIdAsync(id);
-            if (emp is not null)
-            {
-                _context.Employees.Remove(emp);
-                await _context.SaveChangesAsync();
-            }
+            var param = new SqlParameter("@EmployeeId", id);
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC DeleteEmployee @EmployeeId", param);
         }
+
         public async Task<Employee?> GetEmployeeByEmailAsync(string email)
         {
-            return await _context.Employees.FirstOrDefaultAsync(e => e.Email == email);
+            var param = new SqlParameter("@Email", email);
+            var employees = await _context.Employees
+                .FromSqlRaw("EXEC GetEmployeeByEmail @Email", param)
+                .ToListAsync();
+
+            return employees.FirstOrDefault();
         }
     }
 }

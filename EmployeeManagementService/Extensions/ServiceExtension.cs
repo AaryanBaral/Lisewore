@@ -2,14 +2,11 @@ using System.Text;
 using System.Text.Json;
 using Cafe_Management_System.Exceptions;
 using EmployeeManagementService.Configurations;
-using EmployeeManagementService.Data;
 using EmployeeManagementService.Interface;
-using EmployeeManagementService.Models;
 using EmployeeManagementService.Repository;
 using EmployeeManagementService.Service;
 using EmployeeManagementService.Service.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EmployeeManagementService.Extensions
@@ -20,36 +17,12 @@ namespace EmployeeManagementService.Extensions
         {
             services.AddControllers();
             services.AddCorsConfiguration();
-            services.AddIdentityConfiguration();
             services.AddExceptionHandler<GlobalException>();
             services.Configure<JwtConfig>(configuration.GetSection("JwtConfig"));
             services.AddScoped<IJwtService, JwtService>();
             services.AddJwtAuthentication(configuration);
             services.AddRepositories();
             services.AddDatabase(configuration);
-        }
-        private static void AddIdentityConfiguration(this IServiceCollection services)
-        {
-            // Configure Identity for Users
-            services.AddIdentityCore<Users>()
-                .AddEntityFrameworkStores<AppDbContext>()
-                .AddDefaultTokenProviders();
-
-            services.Configure<IdentityOptions>(options =>
-            {
-                // Password settings
-                options.Password.RequireDigit = true;
-                options.Password.RequireLowercase = true;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = true;
-                options.Password.RequiredLength = 6;
-
-                // User settings
-                options.User.RequireUniqueEmail = true;
-            });
-
-            // If you need to add custom user managers
-            services.AddScoped<UserManager<Users>>();
         }
 
         private static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)

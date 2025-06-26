@@ -1,69 +1,117 @@
-
-using EmployeeManagementService.Dtos;
-using EmployeeManagementService.Interface;
+using EmployeeManagementService.Data;
 using EmployeeManagementService.Models;
+using EmployeeManagementService.Interface;
 using EmployeeManagementService.Service.Jwt;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace EmployeeManagementService.Repository
 {
-    public class UserRepository(
-        UserManager<Users> userManager,
-        IJwtService jwtService
-        ) : IUserRepository
+    public class UserRepository : IUserRepository
     {
-        private readonly UserManager<Users> _userManager = userManager;
-        private readonly IJwtService _jwtService = jwtService;
+        private readonly AppDbContext _context;
+        private readonly IJwtService _jwtService;
+
+        public UserRepository(AppDbContext context, IJwtService jwtService)
+        {
+            _context = context;
+            _jwtService = jwtService;
+        }
+
+        // Hash password using SHA256 (for demo only — consider using stronger hashing e.g. BCrypt)
+        private static string HashPassword(string password)
+        {
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(password);
+            var hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
 
         public async Task<string> RegisterUser(Users user, string password)
         {
+            user.PasswordHash = HashPassword(password);
 
-            var isUserCreated = await _userManager.CreateAsync(user, password) ?? throw new Exception("Error while processing identity");
-            if (!isUserCreated.Succeeded)
+            var parameters = new[]
             {
-                throw new Exception(isUserCreated.Errors.FirstOrDefault()?.Description);
-            }
-            var token = _jwtService.GenerateJwtToken(user);
-            return token;
+                new SqlParameter("@Id", user.Id),
+                new SqlParameter("@UserName", user.UserName),
+                new SqlParameter("@Email", user.Email),
+                new SqlParameter("@PasswordHash", user.PasswordHash)
+            };
+
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC AddUser @Id, @UserName, @Email, @PasswordHash",
+                parameters);
+
+            return _jwtService.GenerateJwtToken(user);
         }
 
-        public async Task<string> LoginUser(LoginUserDto loginUserDto)
+        public async Task<string> LoginUser(string email, string password)
         {
-            var user = await _userManager.FindByEmailAsync(loginUserDto.Email) ?? throw new AuthenticationFailureException("Email Not Found");
-            var isPasswordCorrect = await _userManager.CheckPasswordAsync(user, loginUserDto.Password);
-            if (!isPasswordCorrect) throw new AuthenticationFailureException("Password Not Correct");
-            var token = _jwtService.GenerateJwtToken(user);
-            return token;
+            var param = new SqlParameter("@Email", email);
+            var users = await _context.Users
+                .FromSqlRaw("EXEC GetUserByEmail @Email", param)
+                .ToListAsync();
+
+            var user = users.FirstOrDefault() ?? throw new Exception("Email Not Found");
+
+            var passwordHash = HashPassword(password);
+            if (user.PasswordHash != passwordHash)
+                throw new Exception("Password Not Correct");
+
+            return _jwtService.GenerateJwtToken(user);
         }
 
         public async Task<Users?> GetUserByEmail(string email)
         {
-            return await _userManager.FindByEmailAsync(email);
-        }
+            var param = new SqlParameter("@Email", email);
+            var users = await _context.Users
+                .FromSqlRaw("EXEC GetUserByEmail @Email", param)
+                .ToListAsync();
 
-        public async Task<List<Users>> GetAllUsers()
-        {
-            return await _userManager.Users.ToListAsync();
+            return users.FirstOrDefault();
         }
 
         public async Task<Users?> GetUserById(string id)
         {
-            return await _userManager.FindByIdAsync(id);
+            var param = new SqlParameter("@Id", id);
+            var users = await _context.Users
+                .FromSqlRaw("EXEC GetUserById @Id", param)
+                .ToListAsync();
+
+            return users.FirstOrDefault();
+        }
+
+        public async Task<List<Users>> GetAllUsers()
+        {
+            return await _context.Users
+                .FromSqlRaw("EXEC GetAllUsers")
+                .ToListAsync();
+        }
+
+        public async Task UpdateUser(Users user)
+        {
+            var parameters = new[]
+            {
+                new SqlParameter("@Id", user.Id),
+                new SqlParameter("@UserName", user.UserName),
+                new SqlParameter("@Email", user.Email),
+                new SqlParameter("@PasswordHash", user.PasswordHash)
+            };
+
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC UpdateUser @Id, @UserName, @Email, @PasswordHash",
+                parameters);
         }
 
         public async Task DeleteUserById(string id)
         {
-            var user = await _userManager.FindByIdAsync(id) ?? throw new KeyNotFoundException("User Not Found");
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded) throw new ApplicationException($"Internal Server Error: {result.Errors}");
+            var param = new SqlParameter("@Id", id);
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC DeleteUser @Id",
+                param);
         }
-
-        public async Task UpdateUser(Users updatedUser)
-        {
-            await _userManager.UpdateAsync(updatedUser);
-        }
-
     }
 }

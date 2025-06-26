@@ -10,7 +10,7 @@ namespace EmployeeManagementService.Interface
     public interface IUserRepository
     {
         Task<string> RegisterUser(Users user, string password);
-        Task<string> LoginUser(LoginUserDto loginUserDto);
+        Task<string> LoginUser(string email, string password);
         Task<Users?> GetUserByEmail(string email);
         Task<List<Users>> GetAllUsers();
         Task<Users?> GetUserById(string id);

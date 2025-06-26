@@ -1,10 +1,11 @@
-using Microsoft.AspNetCore.Identity;
 
 namespace EmployeeManagementService.Models
 {
-    public class Users : IdentityUser
+    public class Users
     {
-        public override required string Email { get; set; }
-        public override required string UserName { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public required string UserName { get; set; }
+        public required string Email { get; set; }
+        public required string PasswordHash { get; set; }
     }
 }

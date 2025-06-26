@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Xml;
 using EmployeeManagementService.Dtos;
 using EmployeeManagementService.Interface;
 using EmployeeManagementService.Mappers;
@@ -13,16 +16,23 @@ namespace EmployeeManagementService.Service
         {
             _userRepository = userRepository;
         }
+            private static string HashPassword(string password)
+        {
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(password);
+            var hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
 
         public async Task<string> RegisterAsync(RegisterUserDto dto)
         {
-            var user = UserMappers.ToUser(dto);
-            return await _userRepository.RegisterUser(user, dto.Password);
+            var user = UserMappers.ToUser(dto, HashPassword(dto.Password));
+            return await _userRepository.RegisterUser(user,dto.Password);
         }
 
         public async Task<string> LoginAsync(LoginUserDto dto)
         {
-            return await _userRepository.LoginUser(dto);
+            return await _userRepository.LoginUser(dto.Email, dto.Password);
         }
 
         public async Task<ReadUserDto> GetUserByEmailAsync(string email)
