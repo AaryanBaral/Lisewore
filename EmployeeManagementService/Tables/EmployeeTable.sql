@@ -1,0 +1,8 @@
+CREATE TABLE Employees (
+    EmployeeId NVARCHAR(50) PRIMARY KEY,
+    FirstName NVARCHAR(100) NOT NULL,
+    LastName NVARCHAR(100) NOT NULL,
+    Email NVARCHAR(256) NOT NULL,
+    Department NVARCHAR(100) NOT NULL,
+    HireDate DATETIME NOT NULL
+);
