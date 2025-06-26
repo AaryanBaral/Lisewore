@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "iRW4XafFUF2H85594MwfTIhCkYdk2uprC5QYkV2Bhj4=",
+  "Source": "EmployeeManagementService",
+  "BasePath": "_content/EmployeeManagementService",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
